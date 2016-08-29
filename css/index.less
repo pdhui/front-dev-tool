@@ -1,0 +1,33 @@
+.tool-list{
+  position: fixed;
+  bottom: 10px;
+  .loadImg{
+    position: relative;
+  }
+  .imgfile{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    opacity: 0;
+  }
+  .options-group{
+    display: none;
+  }
+  .options-set{
+    cursor: pointer;
+    &:hover{
+      .options-group{
+        display: block;
+      }
+    }
+  }
+}
+#visualImg{
+  width: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: -1;
+}

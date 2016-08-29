@@ -1,0 +1,49 @@
+{
+  "name": "@flyme/modaldialog",
+  "version": "1.4.1",
+  "description": "popup dialog",
+  "main": "./build/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "example": "webpack --config ./webpack.config.test.js",
+    "dev": "node node_modules/webpack-dev-server/bin/webpack-dev-server.js --config webpack.config.js --host=172.17.132.184 --port=8900"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pdhui/modaldialog.git"
+  },
+  "publishConfig": {
+    "registry": "http://172.17.132.227:8888/"
+  },
+  "homepage": "https://github.com/pdhui/modaldialog#readme",
+  "author": "panda.xiong",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-core": "^6.7.7",
+    "babel-loader": "^6.2.4",
+    "babel-plugin-syntax-class-constructor-call": "^6.3.13",
+    "babel-plugin-syntax-class-properties": "^6.5.0",
+    "babel-plugin-syntax-export-extensions": "^6.3.13",
+    "babel-plugin-syntax-object-rest-spread": "^6.5.0",
+    "babel-preset-es2015": "^6.6.0",
+    "css-loader": "^0.23.1",
+    "extract-text-webpack-plugin": "^1.0.1",
+    "less": "^2.6.1",
+    "less-loader": "^2.2.3",
+    "style-loader": "^0.13.1",
+    "webpack": "^1.12.14",
+    "webpack-dev-server": "^1.14.1"
+  },
+  "babel": {
+    "presets": [
+      "es2015"
+    ],
+    "plugins": [
+      "syntax-object-rest-spread",
+      "syntax-export-extensions",
+      "syntax-class-properties",
+      "syntax-class-constructor-call"
+    ]
+  }
+}

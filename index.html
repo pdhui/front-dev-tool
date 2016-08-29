@@ -1,0 +1,28 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,init-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no;" />
+  <title>front-dev-tool</title>
+  <link rel="stylesheet" href="lib/main.css">
+</head>
+<body>
+  <dl class="tool-list">
+    <dt>选项</dt>
+    <dd class="loadImg">载入图片<input type="file" class="imgfile"></dd>
+    <dd class="resizeImg options-set">
+      调整大小
+      <ul class="options-group">
+        <li class="fillScreen">全屏</li>
+        <li class="remainRes">原比例</li>
+      </ul>
+    </dd>
+  </dl>
+  <div class="tool-menu">
+    <svg xmlns="http://www.w3.org/2000/svg" version="1.1">
+       <circle cx="100" cy="50" r="40" stroke="black" stroke-width="2" fill="red" />
+    </svg>
+  </div>
+  <div id="visualImg"></div>
+  <script src="/main.js"></script>
+</body>
+</html>
