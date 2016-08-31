@@ -34,6 +34,17 @@
 .rc-circleMenus{
   width: 300px;
   height: 300px;
+  .menus-group{
+    transition: transform 0.5s ease;
+    transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .menu-item{
+    transition: transform 0.5s ease 0.5s;
+    text{
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+  }
 }
 .triggle-btn-group{
   fill: blue;

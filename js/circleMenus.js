@@ -1,4 +1,7 @@
 const _ = require('./utils.js');
+const TimelineLite = require('../lib/TimelineLite.js');
+require('../lib/EasePack.js');
+require('../lib/CSSPlugin.js');
 
 var SvgElement = function(tag, attrs) {
   var elem = document.createElementNS("http://www.w3.org/2000/svg", tag);
@@ -23,6 +26,7 @@ circleMenus.defaults = {
 
 circleMenus.prototype = {
   constructor: circleMenus,
+  opened: true,
   init: function(){
     this.size = this.options.size;
     this.width = this.size;
@@ -41,6 +45,7 @@ circleMenus.prototype = {
     this.drawPizzas();
     this.drawCircle();
     this.element.appendChild(this.svg);
+    this.bindEvent();
   },
   drawCircle: function(){
     var width = this.size,
@@ -65,10 +70,11 @@ circleMenus.prototype = {
       class: "triggle-btn-txt"
     });
     text.innerHTML = '-';
-    console.log(getComputedStyle(text).width);
+
     pathGroup.appendChild(circle);
     pathGroup.appendChild(text);
     this.svg.appendChild(pathGroup);
+    this.triggleBtn = pathGroup;
   },
   drawPizzas: function(n) {
     var width = this.size,
@@ -81,7 +87,15 @@ circleMenus.prototype = {
         pizzaCount = 360 / perPizza,
         startAngleRadian;
 
-    var pathGroup = new SvgElement("g",{});
+    var transformOrigin = cx + 'px ' + cy + 'px';
+
+    this.menuGroupRotate = 'rotate(-' + perPizza/2 + 'deg)';
+    var pathGroup = new SvgElement("g",{
+      "class": "menus-group",
+      "transform-origin": transformOrigin,
+      style:'transform:'+this.menuGroupRotate+ ' scale(0)'
+    }), pathLink, text,textPathTemp;
+
     for(var i=0; i<pizzaCount;i++){
 
       start_angle = i* perPizza;
@@ -89,7 +103,11 @@ circleMenus.prototype = {
       var path = new SvgElement("path", {
         fill: 'red',
         'stroke-width': 1,
-        stroke: '#000'
+        stroke: '#000',
+        id: 'path'+i
+        // class: 'menu-item',
+        // 'transform-origin': transformOrigin,
+        // style: 'transform: rotate(-' + perPizza*i + 'deg)'
       });
 
       var end_angle = startAngleRadian + _.angleToRadian(perPizza);
@@ -110,12 +128,112 @@ circleMenus.prototype = {
            " 0 " + big + ' ' + direct + ' ' +// Arc details...
            x2 + "," + y2;
       d += 'z';
-      path.setAttribute("d", d);
-      pathGroup.appendChild(path);
 
+      path.setAttribute("d", d);
+
+      pathLink = new SvgElement("a",{
+        class: 'menu-item',
+        'transform-origin': transformOrigin,
+        style: 'transform: rotate(-' + perPizza*i + 'deg)'
+      });
+
+      text = new SvgElement("text",{
+        x: cx,
+        y: cy - r/2,
+        'transform-origin': transformOrigin,
+        transform: 'rotate(' + (perPizza*i+perPizza/2) + ', ' + cx +' ' + cy +')'
+      });
+      text.innerHTML = 'ff';
+      pathLink.appendChild(path);
+      pathLink.appendChild(text);
+      pathGroup.appendChild(pathLink);
     }
     this.svg.appendChild(pathGroup);
+  },
+  toggleMenu: function(){
+    var items = document.querySelectorAll('.menu-item'),
+        tl = this.timelineLite,
+        menuGroupDom = document.querySelector('.menus-group');
+
+    if(!tl){
+      tl = new TimelineLite();
+    }
+    if(this.opened){
+      menuGroupDom.style.transitionDelay = '0s';
+      if(!this.timelineLite){
+        tweenTime.to(menuGroupDom,{transform:this.menuGroupRotate + " scale(1)"});
+        for (var i = 0; i < items.length; i++) {
+          // tl.to(items[i].style, 0.3, {
+          //     transform:"rotateZ(0deg)",
+          //     ease: Circ.easeInOut
+          // }, 0.05);
+          tweenTime.to(items[i],{transform:"rotate(0deg)"});
+        }
+        // tl.to(items, 0.3, {
+        //     scale: 0,
+        //     ease: Back.easeIn
+        // }, 0.3);
+        this.timelineLite = tl;
+      }else{
+
+        // this.timelineLite.restart();
+        tweenTime.restart();
+      }
+
+    }else{
+      // this.timelineLite.reverse();
+      menuGroupDom.style.transitionDelay = '0.8s';
+      tweenTime.reverse();
+    }
+
+    this.opened = !this.opened;
+  },
+  bindEvent: function(){
+    this.triggleBtn.addEventListener('click',this.toggleMenu.bind(this),false);
   }
 }
 
+var tweenTime ={
+  _fns: [],
+  cache: {},
+  id: 0,
+  to: function(dom,attrs){
+    var originAttrs = {},
+        domStyle = dom.style;
+
+    Object.keys(attrs).forEach((key)=>{
+      var value = domStyle[key];
+      if(value != null)
+        originAttrs[key] = value;
+    });
+
+    dom.tweenId = ++ this.id;
+    this.cache[dom.tweenId] = originAttrs;
+    this._fns.push([dom,function(){
+      _.assign(domStyle,attrs);
+    }])
+    requestAnimationFrame(this._fns[this._fns.length-1][1]);
+  },
+  restart: function(){
+    this._fns.forEach((item)=>{
+      var dom = item[0],
+          originAttrs = this.cache[dom.tweenId];
+
+      _.assign(dom.style,originAttrs);
+      requestAnimationFrame(item[1]);
+    });
+  },
+  reverse: function(){
+    var item;
+    for(var i=this._fns.length;i--;){
+      item = this._fns[i];
+      requestAnimationFrame(function(item){
+        var dom = item[0],
+            originAttrs = this.cache[dom.tweenId];
+            console.log('reverse',originAttrs,dom.tweenId);
+        _.assign(dom.style,originAttrs);
+      }.bind(this,item));
+    }
+  }
+}
 module.exports = circleMenus;
