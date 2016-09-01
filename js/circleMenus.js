@@ -3,7 +3,7 @@ const TimelineLite = require('../lib/TimelineLite.js');
 require('../lib/EasePack.js');
 require('../lib/CSSPlugin.js');
 
-var SvgElement = function(tag, attrs) {
+const SvgElement = function(tag, attrs) {
   var elem = document.createElementNS("http://www.w3.org/2000/svg", tag);
 
   Object.keys(attrs).forEach(function(name) {
@@ -13,6 +13,10 @@ var SvgElement = function(tag, attrs) {
   return elem;
 };
 
+const Point = function(x,y){
+  this.x = x;
+  this.y = y;
+}
 const circleMenus = function(element, options){
   this.element = element;
   this.options = _.assign({},circleMenus.defaults, options);
@@ -31,7 +35,7 @@ circleMenus.prototype = {
     this.size = this.options.size;
     this.width = this.size;
     this.height = this.size;
-
+    this.centerPoint = new Point(this.width / 2,this.height/2);
     this.prepare();
   },
   prepare:function(){
@@ -48,10 +52,10 @@ circleMenus.prototype = {
     this.bindEvent();
   },
   drawCircle: function(){
-    var width = this.size,
-        height = this.size,
-        cx = width / 2,
-        cy = height / 2,
+    var width = this.width,
+        height = this.height,
+        cx = this.centerPoint.x,
+        cy = this.centerPoint.y,
         r = Math.min(cx, cy)/4;
 
     var pathGroup = new SvgElement("g",{
@@ -75,19 +79,25 @@ circleMenus.prototype = {
     pathGroup.appendChild(text);
     this.svg.appendChild(pathGroup);
     this.triggleBtn = pathGroup;
+    this.triggleBtnText = text;
   },
   drawPizzas: function(n) {
-    var width = this.size,
-        height = this.size,
-        cx = width / 2,
-        cy = height / 2,
+    var width = this.width,
+        height = this.height,
+        cx = this.centerPoint.x,
+        cy = this.centerPoint.y,
         start_angle = 0,
-        r = Math.min(cx, cy) - 2,
-        perPizza = 60,
-        pizzaCount = 360 / perPizza,
-        startAngleRadian;
+        r = Math.min(cx, cy)/2 - 2,
+        perPizza,
+        pizzaCount,
+        startAngleRadian,
+        big = 0;
 
     var transformOrigin = cx + 'px ' + cy + 'px';
+    var menuDatas = this.options.menuList;
+
+    pizzaCount = menuDatas.length;
+    perPizza = 360 / pizzaCount;
 
     this.menuGroupRotate = 'rotate(-' + perPizza/2 + 'deg)';
     var pathGroup = new SvgElement("g",{
@@ -96,37 +106,32 @@ circleMenus.prototype = {
       style:'transform:'+this.menuGroupRotate+ ' scale(0)'
     }), pathLink, text,textPathTemp;
 
-    for(var i=0; i<pizzaCount;i++){
+    if (_.angleToRadian(perPizza) > Math.PI) big = 1;
+
+    for(var i=0; i<pizzaCount; i++){
+      var item = menuDatas[i],
+          childMenus = item.childMenus;
 
       start_angle = i* perPizza;
       startAngleRadian = _.angleToRadian(start_angle);
       var path = new SvgElement("path", {
         fill: 'red',
         'stroke-width': 1,
-        stroke: '#000',
-        id: 'path'+i
-        // class: 'menu-item',
-        // 'transform-origin': transformOrigin,
-        // style: 'transform: rotate(-' + perPizza*i + 'deg)'
+        stroke: '#000'
       });
 
-      var end_angle = startAngleRadian + _.angleToRadian(perPizza);
+      var end_angle = start_angle + perPizza;
 
-      var big = 0,
-          direct = 1;
+      var direct = 1;
 
-      if (end_angle - start_angle > Math.PI) big = 1;
+      var startPoint = this.getCirclePoint(cx,cy,r,start_angle),
+          endPoint = this.getCirclePoint(cx,cy,r,end_angle);
 
-      var x1 = cx + r * Math.sin(startAngleRadian) ,
-          y1 = cy - r * Math.cos(startAngleRadian),
-          x2 = cx + r * Math.sin(end_angle),
-          y2 = cy - r * Math.cos(end_angle);
-
-      var d = "M" + cx + "," + cy + " " + x1 + ',' + y1;
+      var d = "M" + cx + "," + cy + " " + startPoint.x + ',' + startPoint.y;
 
       d += " A" + r + "," + r + // Draw an arc of radius r
            " 0 " + big + ' ' + direct + ' ' +// Arc details...
-           x2 + "," + y2;
+           endPoint.x + "," + endPoint.y;
       d += 'z';
 
       path.setAttribute("d", d);
@@ -141,14 +146,50 @@ circleMenus.prototype = {
         x: cx,
         y: cy - r/2,
         'transform-origin': transformOrigin,
-        transform: 'rotate(' + (perPizza*i+perPizza/2) + ', ' + cx +' ' + cy +')'
+        transform: 'rotate(' + (perPizza*i+perPizza/2) + ', ' + cx +' ' + cy +') rotate(' + (perPizza*i) +', ' + cx +' ' + (cy- r/2)+')'
       });
-      text.innerHTML = 'ff';
+      text.innerHTML = item.value;
       pathLink.appendChild(path);
       pathLink.appendChild(text);
       pathGroup.appendChild(pathLink);
+      this.drawChildMenus(childMenus,start_angle,end_angle,r);
     }
     this.svg.appendChild(pathGroup);
+  },
+  drawChildMenus: function(childMenus,start_angle,end_angle,r){
+    var cx = this.centerPoint.x,
+        cy = this.centerPoint.y,
+        r = r + 10,
+        outerR = r + 20,
+        path, d, big=0;
+
+    var startPoint = this.getCirclePoint(cx,cy,r,start_angle),
+        endPoint = this.getCirclePoint(cx,cy,r,end_angle),
+        outerStartPoint = this.getCirclePoint(cx,cy,outerR,start_angle),
+        outerEndPoint = this.getCirclePoint(cx,cy,outerR,end_angle);
+
+    if (_.angleToRadian(end_angle - start_angle) > Math.PI) big = 1;
+
+    var d = "M" + startPoint.x + "," + startPoint.y + " " + outerStartPoint.x + ',' + outerStartPoint.y;
+
+    d += " A" + outerR + "," + outerR + // Draw an arc of radius r
+         " 0 " + big + ' ' + 1 + ' ' +// Arc details...
+         outerEndPoint.x + "," + outerEndPoint.y /*+
+         "M" + endPoint.x + ',' + endPoint.y;*/
+    d += 'z';
+
+    path = new SvgElement("path", {
+      fill: 'yellow',
+      'stroke-width': 1,
+      stroke: '#000',
+      d: d
+    });
+
+    this.svg.appendChild(path);
+  },
+  getCirclePoint: function(cx,cy,r,angle){
+    var radian = _.angleToRadian(angle);
+    return {x: cx + r * Math.sin(radian), y: cy - r * Math.cos(radian)};
   },
   toggleMenu: function(){
     var items = document.querySelectorAll('.menu-item'),
@@ -179,11 +220,12 @@ circleMenus.prototype = {
         // this.timelineLite.restart();
         tweenTime.restart();
       }
-
+      this.triggleBtnText.innerHTML = '+';
     }else{
       // this.timelineLite.reverse();
       menuGroupDom.style.transitionDelay = '0.8s';
       tweenTime.reverse();
+      this.triggleBtnText.innerHTML = '-';
     }
 
     this.opened = !this.opened;

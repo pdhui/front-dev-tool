@@ -52,7 +52,9 @@ const devTool = {
   start(){
     this.coverImg = document.getElementById('visualImg');
     this.coverImgStyle = this.coverImg.style;
-    this.cm = new circleMenus(document.querySelector('.menu-btn'));
+    this.cm = new circleMenus(document.querySelector('.menu-btn'),{
+      menuList:[{value:'载入图片'},{value:'调整图片'}]
+    });
     this.initEvent();
   }
 };
