@@ -30,7 +30,7 @@ module.exports = {
         ]
     },
     plugins: [
-        new ExtractTextPlugin("../lib/[name].css")/*,
+        new ExtractTextPlugin("css/[name].css")/*,
         new webpack.optimize.UglifyJsPlugin({
             mangle: {
                 except: ['$', 'exports', 'require']
