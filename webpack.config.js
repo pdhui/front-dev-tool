@@ -18,19 +18,19 @@ module.exports = {
         loaders: [
             {
                 test: /\.css$/,
-                loader: ExtractTextPlugin.extract('style-loader', 'css-loader?!less-loader'),
+                loader: 'style-loader!css-loader?!less-loader',
                 exclude: '/node_modules/'
             },
             {
                 test: /\.less$/,
-                loader: ExtractTextPlugin.extract('style-loader', 'css-loader?!less-loader'),
+                loader: 'style-loader!css-loader?!less-loader',
                 exclude: '/node_modules/'
             },
             { test: /\.js$/, exclude: /node_modules/, loader: 'babel' }
         ]
     },
     plugins: [
-        new ExtractTextPlugin("css/[name].css")/*,
+        /*new ExtractTextPlugin("css/[name].css"),
         new webpack.optimize.UglifyJsPlugin({
             mangle: {
                 except: ['$', 'exports', 'require']

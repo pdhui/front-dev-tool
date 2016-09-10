@@ -1,35 +1,22 @@
 require('../css/index.less');
 const _ = require('./utils.js');
+const Point = require('./Point.js');
+const getMenuConfig = require('./menuConfig.js');
 const circleMenus = require('./circleMenus.js');
+const guideLinePlugin = require('./GuideLinePlugin.js');
 
 const devTool = {
+  isMobile: (function(){
+    var ua = navigator.userAgent;
+    return ua.indexOf('Mobile') > -1 || ua.indexOf('Android') > -1;
+  })(),
   opacitys:[1,0.8,0.5,0.3,0],
   currentOpacityIdx:0,
-  initEvent(){
-    document.querySelector('.imgfile').addEventListener('change',(e)=>{
-      this.loadImg(e);
-    },false);
-
-    document.querySelector('.tool-list').addEventListener('click',(e)=>{
-      var target = e.target,
-          classList = target.classList;
-
-      if(classList.contains('fillScreen')){
-        var docWidth = document.documentElement.clientWidth,
-            ratio = this.visualImgSize.width / this.visualImgSize.height;
-
-        this.coverImgStyle.width = docWidth + 'px';
-        this.coverImgStyle.height = docWidth / ratio + 'px';
-      }else if(classList.contains('remainRes')){
-        _.assign(this.coverImgStyle,{
-          width: this.visualImgSize.width,
-          height: this.visualImgSize.height
-        });
-      }
-    },false);
-  },
+  isLoad: false,
   dispatchEvent: function(e,menuid) {
-    var target = e.target;
+    var target = e.target,
+        cvasW = this.canvasWidth,
+        cvasH = this.canvasHeight;
 
     if(menuid == 'fillScreen'){
       var docWidth = document.documentElement.clientWidth,
@@ -37,17 +24,60 @@ const devTool = {
 
       this.coverImgStyle.width = docWidth + 'px';
       this.coverImgStyle.height = docWidth / ratio + 'px';
+
+      this.caculateCanvas();
+
+      guideLinePlugin.resizeGuideLine(cvasW,cvasH);
     }else if(menuid == 'remainRes'){
       _.assign(this.coverImgStyle,{
-        width: this.visualImgSize.width,
-        height: this.visualImgSize.height
+        width: this.visualImgSize.width + 'px',
+        height: this.visualImgSize.height + 'px'
       });
+      this.caculateCanvas();
+      guideLinePlugin.resizeGuideLine(cvasW,cvasH);
     }else if(menuid == 'loadImg'){
       document.querySelector('.imgfile').click();
-    }else if(menuid == 'opacitySet'){
+    }else if(menuid == 'toggleShow'){
+      var opacity = this.coverImgStyle.opacity;
+      if(opacity > 0 || opacity === '')
+        this.coverImgStyle.opacity = 0;
+      else
+        this.coverImgStyle.opacity = 1;
+    }else if(menuid == 'fadeout'){
       this.currentOpacityIdx = (this.currentOpacityIdx + 1) % this.opacitys.length;
       this.coverImgStyle.opacity = this.opacitys[this.currentOpacityIdx];
+    }else if(menuid == 'fadein'){
+      this.currentOpacityIdx = Math.max(this.currentOpacityIdx - 1, 0);
+      this.coverImgStyle.opacity = this.opacitys[this.currentOpacityIdx];
+    }else if(menuid == 'getColor'){
+      this.createColorPanel();
+    }else if(menuid == 'createGuideLine'){
+      guideLinePlugin.createGuideLine();
+    }else if(menuid == 'deleteLastLine'){
+      var guideLine = document.querySelectorAll('.guide-line:last-child');
+      if(guideLine){
+        guideLine[0].remove();
+        guideLinePlugin.linePoints.pop();
+      }
+    }else if(menuid == 'deleteAllLine'){
+      var guideLines = document.querySelectorAll('.guide-line');
+      guideLines.forEach((item)=>{
+          item.remove();
+      });
+      guideLinePlugin.linePoints = [];
+    }else if(menuid == 'toggleLine'){
+      var guideLines = document.querySelectorAll('.guide-line');
+
+      guideLines.forEach((item)=>{
+          if(this.isShowGuideLine){
+            item.style.display = 'none';
+          }else{
+            item.style.display = 'block';
+          }
+      });
+      this.isShowGuideLine = !this.isShowGuideLine;
     }
+    e.stopPropagation();
   },
   loadImg(e){
     var reader = new FileReader(),
@@ -57,20 +87,204 @@ const devTool = {
       var img = new Image();
       img.src = result;
       img.onload = (e)=>{
-        var tg = e.target,
-            visualImgStyle = document.getElementById('visualImg').style;
+        var tg = e.target;
 
-        _.assign(visualImgStyle,{
-          backgroundImage: 'url(' + result + ')',
-          width: tg.width,
-          height: tg.height
-        });
         this.visualImgSize = {width: tg.width, height: tg.height};
+        this.createImgCanvas(img);
         img.onload = null;
         img = null;
       };
     };
     reader.readAsDataURL(target.files[0]);
+  },
+  createImgCanvas(img){
+    var canvas = document.createElement('canvas'),
+        ctx = canvas.getContext("2d");
+
+    canvas.id = 'visualImg';
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    ctx.drawImage(img,0,0,img.width,img.height);
+
+    canvas.addEventListener('click',this.proxyClickCanvas,false);
+    document.body.appendChild(canvas);
+
+    this.canvas = canvas;
+    this.canvasContext = ctx;
+    this.coverImgStyle = canvas.style;
+    this.caculateCanvas();
+  },
+  caculateCanvas(){
+    var canvasStyle = this.getStyle(this.canvas);
+
+    this.canvasWidth = parseInt(canvasStyle.width);
+    this.canvasHeight = parseInt(canvasStyle.height);
+  },
+  clickCanvas(e){
+    var target = e.target,
+        cavX, cavY, imgData,
+        canvasPixel;
+
+    if(!this.isColorPicker)
+      return;
+    cavX = e.pageX - target.offsetLeft;
+    cavY = e.pageY - target.offsetTop;
+
+    canvasPixel = this.getCanvasPixel(cavX, cavY);
+    imgData = this.canvasContext.getImageData(canvasPixel.x,canvasPixel.y,1,1);
+    this.setColorVl(imgData.data.slice(0,4));
+  },
+  getCanvasPixel(cavX,cavY){
+    cavX = this.visualImgSize.width / this.getStyle(this.canvas,'width').replace('px','') * cavX;
+    cavY = this.visualImgSize.height / this.getStyle(this.canvas,'height').replace('px','') * cavY;
+
+    return new Point(cavX,cavY);
+  },
+  createColorPanel(){
+    this.canvas.addEventListener('mousemove',this.proxyCanvasMove,false);
+    this.canvas.addEventListener('touchmove',this.proxyCanvasMove,false);
+
+    var colorPanel = document.querySelector('._color-panel-fd');
+
+    if(!colorPanel){
+      colorPanel = _.createHtmlDom('<aside class="_color-panel-fd"><ul><li><input class="rgbvl" placeholder="rgba值"></li>' +
+          '<li><input class="hexvl" placeholder="hex值"></li><li><span class="color-tip">点击获取颜色</span><em class="colorShow"></em></li><em class="closeColorPn">+</em></aside>')
+      document.body.appendChild(colorPanel);
+    }
+
+    colorPanel.style.display = 'block';
+    this.isColorPicker = true;
+  },
+  closeColorPanel(){
+    document.querySelector('._color-panel-fd').style.display = 'none';
+    this.canvas.removeEventListener('mousemove',this.proxyCanvasMove);
+    this.canvas.removeEventListener('touchmove',this.proxyCanvasMove);
+    this.isColorPicker = false;
+  },
+  canvasMove(evt){
+    var touch = evt.touches ? evt.touches[0] : evt;
+    if(!this.fixColorPicker)
+      this.clickCanvas(touch);
+  },
+  setColorVl(pixel){
+    var values = pixel.map((item)=>{
+      return item
+    }), hexdatas = [];
+    document.querySelector('.rgbvl').value = `rgba(${values.join(',')})`;
+
+    pixel.slice(0,pixel.length-1).forEach((item,idx)=>{
+      var hexVl;
+      item = item * 1;
+      hexVl = item.toString(16);
+      if(hexVl == 0)
+        hexVl = '00';
+      if(hexVl.length == 1)
+        hexVl = '0' + hexVl;
+      hexdatas[idx] = hexVl;
+    });
+
+    document.querySelector('.hexvl').value = `#${hexdatas.join('')}`;
+    document.querySelector('.colorShow').style.background = document.querySelector('.rgbvl').value;
+  },
+  getStyle(dom,prop){
+    var computedStyle = getComputedStyle(dom);
+
+    if(!prop)
+      return computedStyle;
+
+    return getComputedStyle(dom).getPropertyValue(prop);
+  },
+  _mouseDown(evt){
+    var style = getComputedStyle(this.$drag);
+    evt = evt.touches ? evt.touches[0] : evt;
+    this.posX = evt.clientX;
+    this.posY = evt.clientY;
+    this.startX = style.left.replace('px','')*1;
+    this.startY = style.bottom.replace('px','')*1;
+
+    this.moveX = 0;
+    this.moveY = 0;
+    this.lastX = document.body.clientWidth - 30;
+    this.lastY = -220;
+    this.isDown = true;
+  },
+  _mousemove(evt){
+    if(!this.isDown)
+      return;
+    var touch = evt.touches ? evt.touches[0] : evt;
+
+    var posX = touch.clientX,
+        posY = touch.clientY;
+
+    var offsetX = posX - this.posX,
+        offsetY = posY - this.posY,
+        lastX, lastY, rect;
+
+    this.moveX += offsetX;
+    this.moveY -= offsetY;
+
+    this.posX = posX;
+    this.posY = posY;
+
+    lastX = this.startX + this.moveX;
+    lastY = this.startY + this.moveY;
+
+
+    if(lastX > this.lastX)
+      lastX = this.lastX;
+    if(lastY < this.lastY)
+      lastY = this.lastY;
+
+    _.assign(this.$drag.style,{
+      left: lastX + 'px',
+      bottom: lastY + 'px'
+    });
+
+    this.transformContainer();
+    evt.preventDefault();
+  },
+  transformContainer(){
+    var winW = window.innerWidth,
+        rect = this.$container.getBoundingClientRect(),
+        diffL = pageXOffset + rect.right - winW,
+        scale = (1 - Math.abs(diffL / rect.width));
+
+    if(diffL > -15 && diffL < 79){
+      if(scale < 0.4 )
+        scale = 0.4;
+      this.$container.style.transform = 'scale(' + (scale) + ')';
+    }
+  },
+  _mouseUp(evt){
+    this.isDown = false;
+  },
+  clickBody(e){
+    var target = e.target;
+
+    if(!target.closest('#_fd_dev_'))
+      this.cm.packUpChildMenus();
+
+    if(target.classList.contains('closeColorPn')){
+      this.closeColorPanel();
+    }
+
+    if(guideLinePlugin.isCreatingLine){
+      guideLinePlugin.stopGuideLine();
+    }
+
+    if(this.isColorPicker && !target.closest('._color-panel-fd')){
+      if(!this.isMobile){
+        if(!this.fixColorPicker){
+          document.querySelector('._color-panel-fd .color-tip').innerText = '点击重新选取颜色';
+        }else{
+          document.querySelector('._color-panel-fd .color-tip').innerText = '点击获取颜色';
+        }
+      }
+
+      this.fixColorPicker = !this.fixColorPicker;
+      e.preventDefault();
+    }
   },
   init(){
     var container = document.createElement('div');
@@ -80,36 +294,94 @@ const devTool = {
         '<input type="file" class="imgfile">' +
         '</div> </dd></dl>';
 
+    container.id = '_fd_dev_';
     document.body.appendChild(container);
+
+    this.$container = document.querySelector('.tool-list');
+    this.isShowGuideLine = true;
+    guideLinePlugin.init(this);
+  },
+  handleEvent: function(event){
+    switch(event.type) {
+      case 'mousedown':
+      case 'touchstart':
+        this._mouseDown(event);
+        break;
+      case 'mousemove':
+      case 'touchmove':
+        this._mousemove(event);
+        break;
+      case 'mouseup':
+      case 'touchend':
+        this._mouseUp(event);
+        break;
+    }
+  },
+  bindEvent(){
+    var container = document.querySelector('.tool-list');
+
+    this.proxyLoadImg = this.loadImg.bind(this);
+    this.proxyClickBody = this.clickBody.bind(this);
+    this.proxyClickCanvas = this.clickCanvas.bind(this);
+    this.proxyCanvasMove = this.canvasMove.bind(this);
+
+    container.addEventListener('mousedown',this,false);
+    container.addEventListener('mousemove',this,false);
+    container.addEventListener('mouseup',this,false);
+
+    container.addEventListener('touchstart',this,false);
+    container.addEventListener('touchmove',this,false);
+    container.addEventListener('touchend',this,false);
+
+    document.body.addEventListener('click',this.proxyClickBody,false);
+    document.querySelector('.imgfile').addEventListener('change',this.proxyLoadImg,false);
+
+    this.$drag = container;
+  },
+  destroy(){
+    container.removeEventListener('mousedown',this);
+    container.removeEventListener('mousemove',this);
+    container.removeEventListener('mouseup',this);
+
+    container.removeEventListener('touchstart',this);
+    container.removeEventListener('touchmove',this);
+    container.removeEventListener('touchend',this);
+
+    document.body.removeEventListener('click',this.proxyClickBody);
+    document.querySelector('.imgfile').removeEventListener('change',this.proxyLoadImg);
+
+    this.canvas.removeEventListener('mousemove',this.proxyCanvasMove);
+    this.canvas.removeEventListener('touchmove',this.proxyCanvasMove);
+    this.canvas && this.canvas.removeEventListener('click',this.proxyClickCanvas);
+
+    this.cm.destroy();
+    document.querySelector('._fd_dev_').remove();
+
+    this.isLoad == false;
   },
   start(){
     this.init();
-    this.coverImg = document.getElementById('visualImg');
-    this.coverImgStyle = this.coverImg.style;
-    this.cm = new circleMenus(document.querySelector('.menu-btn'),{
-      menuList:[
-        {
-          value:'1载入图片',
-          id: 'loadImg',
-          click: this.dispatchEvent.bind(this)
-        },
-        {
-          value:'2图片全屏',
-          id: 'fillScreen',
-          click: this.dispatchEvent.bind(this)
-        },{
-          value:'2保持图片原比例',
-          id: 'remainRes',
-          click: this.dispatchEvent.bind(this)
-        },{
-          value:'调整透明度',
-          id: 'opacitySet',
-          click: this.dispatchEvent.bind(this)
-        }
-      ]
-    });
-    this.initEvent();
+    this.bindEvent();
+    this.cm = new circleMenus(document.querySelector('.menu-btn'),getMenuConfig(this));
+    this.cm.toggleMenu();
+    this.isLoad == true;
   }
 };
 
-devTool.start();
+if(!chrome.extension){
+  devTool.start();
+}
+
+chrome.extension.onRequest.addListener( function(request, sender, sendResponse) {
+  var isActived = false;
+  if (request.command == "toggleOpen"){
+    if(!devTool.isLoad){
+      devTool.start();
+      isActived = true;
+    }else{
+      devTool.destroy();
+    }
+
+    sendResponse({ status: isActived});
+  }
+});

@@ -2,10 +2,16 @@
   "name": "front-dev",
   "manifest_version":2,
   "version": "0.1.0",
-  "description": "frontEnd assist tool 前端视觉还原辅助工具",
+  "description": "frontEnd assist tool 鍓嶇瑙嗚杩樺師杈呭姪宸ュ叿",
+  "content_scripts": [ {
+      "js": [ "main.js" ],
+      "matches": [ "*://*/*", "file:///*" ]
+   } ],
   "browser_action": {
     "default_icon": "icon.png" ,
-    "default_title": "front-assist",
-    "default_popup": "index.html"
+    "default_title": "front-assist"
+  },
+  "background": {
+    "scripts": [ "background.js" ]
   }
 }

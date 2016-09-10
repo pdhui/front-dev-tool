@@ -1,7 +1,8 @@
 const _ = require('./utils.js');
-const TimelineLite = require('../lib/TimelineLite.js');
-require('../lib/EasePack.js');
-require('../lib/CSSPlugin.js');
+// const TimelineLite = require('../lib/TimelineLite.js');
+// require('../lib/EasePack.js');
+// require('../lib/CSSPlugin.js');
+function TimelineLite(){}
 
 const SvgElement = function(tag, attrs) {
   var elem = document.createElementNS("http://www.w3.org/2000/svg", tag);
@@ -36,6 +37,7 @@ circleMenus.defaults = {
 circleMenus.prototype = {
   constructor: circleMenus,
   opened: true,
+  menusMap: {},
   events:{},
   init: function(){
     this.size = this.options.size;
@@ -53,7 +55,7 @@ circleMenus.prototype = {
         "class": this.options.svgClz
     });
 
-    this.drawPizzas();
+    this.drawPizzas(Math.min(this.centerPoint.x, this.centerPoint.y)/2,this.options.menuList,{hide:true});
     this.drawCircle();
     this.element.appendChild(this.svg);
     this.bindEvent();
@@ -63,7 +65,7 @@ circleMenus.prototype = {
         height = this.height,
         cx = this.centerPoint.x,
         cy = this.centerPoint.y,
-        r = Math.min(cx, cy)/4;
+        r = Math.min(cx, cy)/5;
 
     var pathGroup = new SvgElement("g",{
       class: 'triggle-btn-group'
@@ -88,29 +90,34 @@ circleMenus.prototype = {
     this.triggleBtn = pathGroup;
     this.triggleBtnText = text;
   },
-  drawPizzas: function(n) {
+  drawPizzas: function(r,menuDatas,settings) {
     var width = this.width,
         height = this.height,
         cx = this.centerPoint.x,
         cy = this.centerPoint.y,
         start_angle = 0,
-        r = Math.min(cx, cy) - 2,
         perPizza,
         pizzaCount,
         startAngleRadian,
-        big = 0;
+        big = 0,
+        menusMap;
+
+    menusMap = this.menusMap;
+
+    settings = settings || {};
+    var cls = settings.cls || '',
+        scaleStyle = settings.hide ? ' scale(0)' : '';
 
     var transformOrigin = cx + 'px ' + cy + 'px';
-    var menuDatas = this.options.menuList;
 
     pizzaCount = menuDatas.length;
     perPizza = 360 / pizzaCount;
 
     this.menuGroupRotate = 'rotate(-' + perPizza/2 + 'deg)';
     var pathGroup = new SvgElement("g",{
-      "class": "menus-group",
+      "class": "menus-group " + cls,
       "transform-origin": transformOrigin,
-      style:'transform:'+this.menuGroupRotate+ ' scale(0)'
+      style:'transform:'+this.menuGroupRotate+ scaleStyle
     }),
     childPathGroup = new SvgElement("g",{
       "class": "child-menus-group",
@@ -126,6 +133,9 @@ circleMenus.prototype = {
           childEndAngle,
           textOriginRotate = 0,
           txtCy;
+
+      if(!settings.isChild)
+        menusMap[item.id] = item;
 
       start_angle = i* perPizza;
       startAngleRadian = _.angleToRadian(start_angle);
@@ -179,13 +189,29 @@ circleMenus.prototype = {
       //   childEndAngle = end_angle;
       // else
         childEndAngle = end_angle - 5;
-      if(childMenus && childMenus.length > 0)
-        childPathGroup.appendChild(this.getChildMenus(childMenus,start_angle,childEndAngle,r));
+      if(childMenus && childMenus.length > 0){
+        // childPathGroup.appendChild(this.getChildMenus(childMenus,start_angle,childEndAngle,r));
+        this.addEvent('hover',item.id,(cms,e,menuId)=>{
+          if(this.hoverEles === menuId)
+            return;
 
-      this.addEvent(item.id,item.click);
+          this.packUpChildMenus();
+
+          this.hoverEles = menuId;
+          this.drawPizzas(r * 2 - 5,cms[0],{cls: 'child-menus'+ menuId,first:true,isChild:true});
+          document.querySelectorAll(`.child-menus${menuId} .menu-item`).forEach((item)=>{
+            item.style.transform = 'rotate(0deg)';
+          })
+        },childMenus)
+      }
+
+      this.addEvent('click',item.id,item.click);
     }
-    this.svg.appendChild(pathGroup);
-    this.svg.appendChild(childPathGroup);
+    if(settings.first)
+      this.svg.insertBefore(pathGroup,this.svg.firstChild);
+    else
+      this.svg.appendChild(pathGroup);
+    // this.svg.appendChild(childPathGroup);
   },
   getChildMenus: function(childMenus,start_angle,end_angle,r){
     var cx = this.centerPoint.x,
@@ -247,6 +273,22 @@ circleMenus.prototype = {
   }
     return pathGroup;
   },
+  packUpChildMenus: function(){
+    if(!!this.hoverEles){
+      var preChildMenus = this.menusMap[this.hoverEles].childMenus || [];
+
+      document.querySelector('.child-menus' + this.hoverEles).remove();
+
+      preChildMenus.forEach((childmu)=>{
+        Object.keys(childmu).forEach((key)=>{
+          if(typeof childmu[key] == 'function'){
+            this.removeEvent(key,childmu.id);
+          }
+        })
+      });
+      this.hoverEles = '';
+    }
+  },
   getCirclePoint: function(cx,cy,r,angle){
     var radian = _.angleToRadian(angle);
     return {x: cx + r * Math.sin(radian), y: cy - r * Math.cos(radian)};
@@ -264,7 +306,7 @@ circleMenus.prototype = {
       menuGroupDom.style.transitionDelay = '0s';
       if(!this.timelineLite){
         tweenTime.to(menuGroupDom,{transform:this.menuGroupRotate + " scale(1)"});
-        tweenTime.to(childMenuGroupDom,{transform:this.menuGroupRotate + " scale(1)"});
+        // tweenTime.to(childMenuGroupDom,{transform:this.menuGroupRotate + " scale(1)"});
         for (var i = 0; i < items.length; i++) {
           // tl.to(items[i].style, 0.3, {
           //     transform:"rotateZ(0deg)",
@@ -292,25 +334,75 @@ circleMenus.prototype = {
 
     this.opened = !this.opened;
   },
-  dispatchMenu: function(e){
+  dispatchMenu: function(evtName,e){
     var target = e.target,
         menuItem = target.closest('.menu-item'),
+        evtList = this.events[evtName],
         menuId,
         callback;
 
-    if(menuItem){
+    if(menuItem && evtList){
       menuId = menuItem.getAttribute('data-id');
-      callback = this.events[menuId];
-      callback && callback(e,menuId);
+
+      evtList.forEach((item)=>{
+        if(item[0] == menuId && item[1]){
+          if(item[2])
+            item[1](item[2],e,menuId);
+          else{
+            item[1](e,menuId);
+          }
+        }
+      });
     }
   },
-  bindEvent: function(){
-    this.triggleBtn.addEventListener('click',this.toggleMenu.bind(this),false);
-    document.querySelector('.menus-group').addEventListener('click',this.dispatchMenu.bind(this),false);
+  destroy:function(){
+    this.triggleBtn.removeEventListener('click',this.proxyToggleMenu);
+    this.svg.removeEventListener('click',this.proxyClickDispatch);
+    this.triggleBtn.removeEventListener('mouseenter',this.proxyRemoveChildMenus);
+    document.querySelector('.menus-group').removeEventListener('mouseover',this.proxyHoverDispatch);
   },
-  addEvent:function(name,fn){
-    this.events[name] = fn;
-  }
+  bindEvent: function(){
+    this.proxyToggleMenu = this.toggleMenu.bind(this);
+    this.proxyClickDispatch = this.dispatchMenu.bind(this,'click');
+    this.proxyHoverDispatch = this.dispatchMenu.bind(this,'hover');
+    this.proxyRemoveChildMenus = this.removeChildMenus.bind(this);
+
+    this.triggleBtn.addEventListener('click',this.proxyToggleMenu,false);
+    this.svg.addEventListener('click',this.proxyClickDispatch,false);
+    this.triggleBtn.addEventListener('mouseenter',this.proxyRemoveChildMenus,false);
+    document.querySelector('.menus-group').addEventListener('mouseover',this.proxyHoverDispatch,false);
+  },
+  removeChildMenus: function(){
+    var menus = document.querySelector('.child-menus' + this.hoverEles);
+    if(menus){
+      menus.remove();
+      this.hoverEles = '';
+    }
+  },
+  addEvent:function(evtName,name,fn){
+    var arg = Array.prototype.slice.call(arguments,3);
+    var eventList = this.events[evtName]
+    if(!eventList)
+      eventList = this.events[evtName] = [];
+
+    arg = arg.length == 0 ? undefined : arg;
+    eventList.push([name,fn,arg]);
+  },
+  removeEvent: function(evtName,name,fn){
+    var eventList = this.events[evtName],
+        item;
+    if(!eventList || eventList.length == 0)
+      return;
+
+    for(var i=0,len=eventList.length; i < len; i++){
+      item = eventList[i];
+      if(item[0] == name){
+        eventList.splice(i,1);
+        return item;
+      }
+    }
+  },
+  hoverEles:''
 }
 
 var tweenTime ={
