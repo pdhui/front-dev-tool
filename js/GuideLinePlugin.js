@@ -3,6 +3,7 @@ const Point = require('./Point.js');
 
 module.exports = {
   isCreatingLine: false,
+  isShowCoords: true,
   activedLine: null,
   linePoints: [],
   init(context){
@@ -10,12 +11,15 @@ module.exports = {
     this.proxyLineMove = this.guideLineMove.bind(this);
   },
   createGuideLine(){
-    var newLine = _.createHtmlDom('<div class="guide-line"><i class="ver-guide-line"></i><i class="hor-guide-line"></i><span class="guide-txt"></span></div>');
+    if(this.isCreatingLine)
+      return;
+
+    var newLine = _.createHtmlDom('<div class="guide-line front-guide"><i class="ver-guide-line"></i><i class="hor-guide-line"></i><span class="guide-txt"></span></div>');
 
     newLine.querySelector('.ver-guide-line').style.height = this.context.canvasHeight;
     newLine.querySelector('.hor-guide-line').style.width = this.context.canvasWidth;
-    document.body.appendChild(newLine);
 
+    this.context.appendContainer(newLine);
     document.body.addEventListener('mousemove',this.proxyLineMove,false);
     document.body.addEventListener('touchmove',this.proxyLineMove,false);
     document.body.addEventListener('keydown',this.proxyLineMove,false);
@@ -23,6 +27,8 @@ module.exports = {
     this.isCreatingLine = true;
     this.activedLine = newLine;
     this.createZoom();
+
+    this.context.canvas.classList.add('front-cav');
     // document.body.style.overflow = 'hidden';
   },
   createZoom(){
@@ -31,7 +37,8 @@ module.exports = {
 
     canvas.width = 50;
     canvas.height = 50;
-    document.body.appendChild(canvas);
+
+    this.context.appendContainer(canvas);
     this.guideZoomCanvas = canvas;
     this.guideZoomCtx = canvas.getContext('2d');
   },
@@ -72,6 +79,8 @@ module.exports = {
     var touch = evt.touches ? evt.touches[0] : evt;
     var pageX = touch.pageX,
         pageY = touch.pageY,
+        lastPageX = this.lastPageX,
+        lastPageY = this.lastPageY,
         guideTxt;
 
     var dom = this.activedLine;
@@ -92,13 +101,23 @@ module.exports = {
       }else if(keyCode == 13){
         this.stopGuideLine();
         return;
+      }else if(keyCode == 27){
+        //取消新建
+        this.remove(true);
+        return;
       }
+    }else{
+      this.lastPageX = pageX;
+      this.lastPageY = pageY;
+      if(lastPageX == pageX && lastPageY == pageY)
+        return;
     }
+
      _.assign(dom.querySelector('.ver-guide-line').style,{
-      left: pageX
+      left: pageX + 'px'
     });
     _.assign(dom.querySelector('.hor-guide-line').style,{
-      top: pageY
+      top: pageY + 'px'
     });
 
     guideTxt = dom.querySelector('.guide-txt');
@@ -117,10 +136,6 @@ module.exports = {
     var posX, posY,
         lastPoint, startPoint;
 
-    document.body.removeEventListener('mousemove',this.proxyLineMove);
-    document.body.removeEventListener('touchmove',this.proxyLineMove);
-    document.body.removeEventListener('keydown',this.proxyLineMove);
-
     var guideTxt = this.activedLine.querySelector('.guide-txt');
 
     posX = guideTxt.style.left.replace('px','') * 1 - 10;
@@ -138,9 +153,8 @@ module.exports = {
       this.createLineLabel(startPoint,lastPoint);
     }
     this.linePoints.push(lastPoint);
-    this.guideZoomCanvas.remove();
-    this.guideZoomCtx = null;
-    this.guideZoomCanvas = null;
+
+    this.remove(false);
   },
   zoomIn(x,y){
     if(!this.guideZoomCtx)
@@ -151,8 +165,8 @@ module.exports = {
     this.drawLine(new Point(25,0),new Point(25,50));
     this.drawLine(new Point(0,25),new Point(50,25));
     _.assign(this.guideZoomCanvas.style,{
-      left: x - 25 + 50,
-      top: y - 25 + 50
+      left: x + 10 + 'px',
+      top: y + 30 + 'px'
     })
   },
   drawLine(p1,p2){
@@ -179,13 +193,13 @@ module.exports = {
           guideTxt = line.querySelector('.guide-txt');
 
       _.assign(line.querySelector('.ver-guide-line').style,{
-        height: cvasH,
-        left: point.x
+        height: cvasH + 'px',
+        left: point.x + 'px'
       });
 
       _.assign(line.querySelector('.hor-guide-line').style,{
-        height: cvasW,
-        top: point.y
+        height: cvasW + 'px',
+        top: point.y + 'px'
       });
 
       _.assign(guideTxt.style,{
@@ -201,5 +215,29 @@ module.exports = {
 
       prePoint = point;
     });
+  },
+  toggleLineCoords(){
+    document.querySelectorAll('.guide-line .guide-txt').forEach((dom)=>{
+      if(this.isShowCoords)
+        dom.style.display = 'none';
+      else
+        dom.style.display = 'block';
+    });
+
+    this.isShowCoords = !this.isShowCoords;
+  },
+  remove(isDel){
+    document.body.removeEventListener('mousemove',this.proxyLineMove);
+    document.body.removeEventListener('touchmove',this.proxyLineMove);
+    document.body.removeEventListener('keydown',this.proxyLineMove);
+
+    this.guideZoomCanvas.remove();
+    this.guideZoomCtx = null;
+    this.guideZoomCanvas = null;
+    this.context.canvas.classList.remove('front-cav');
+    if(isDel){
+      this.activedLine.remove();
+      this.activedLine = null;
+    }
   }
 };

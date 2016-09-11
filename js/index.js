@@ -1,4 +1,4 @@
-require('../css/index.less');
+const mainStyleCss = require('../css/index.less');
 const _ = require('./utils.js');
 const Point = require('./Point.js');
 const getMenuConfig = require('./menuConfig.js');
@@ -76,6 +76,8 @@ const devTool = {
           }
       });
       this.isShowGuideLine = !this.isShowGuideLine;
+    }else if(menuid == 'toggleLineCoords'){
+      guideLinePlugin.toggleLineCoords();
     }
     e.stopPropagation();
   },
@@ -287,7 +289,13 @@ const devTool = {
     }
   },
   init(){
-    var container = document.createElement('div');
+    var container = document.createElement('div'),
+        style = document.createElement('style');
+
+
+    style.id="fddev-chrome-css";
+    style.innerHTML = mainStyleCss;
+    document.querySelector('head').appendChild(style);
     container.innerHTML = '<dl class="tool-list">'+
         '<dd><div class="tool-menu">' +
         '<div class="menu-btn"></div>' +
@@ -298,8 +306,12 @@ const devTool = {
     document.body.appendChild(container);
 
     this.$container = document.querySelector('.tool-list');
+    this.mainContainer = container;
     this.isShowGuideLine = true;
     guideLinePlugin.init(this);
+  },
+  appendContainer(dom){
+    this.mainContainer.appendChild(dom);
   },
   handleEvent: function(event){
     switch(event.type) {
@@ -339,6 +351,7 @@ const devTool = {
     this.$drag = container;
   },
   destroy(){
+    var container = this.$drag;
     container.removeEventListener('mousedown',this);
     container.removeEventListener('mousemove',this);
     container.removeEventListener('mouseup',this);
@@ -350,38 +363,45 @@ const devTool = {
     document.body.removeEventListener('click',this.proxyClickBody);
     document.querySelector('.imgfile').removeEventListener('change',this.proxyLoadImg);
 
-    this.canvas.removeEventListener('mousemove',this.proxyCanvasMove);
-    this.canvas.removeEventListener('touchmove',this.proxyCanvasMove);
-    this.canvas && this.canvas.removeEventListener('click',this.proxyClickCanvas);
+    if(this.canvas){
+      this.canvas.removeEventListener('mousemove',this.proxyCanvasMove);
+      this.canvas.removeEventListener('touchmove',this.proxyCanvasMove);
+      this.canvas.removeEventListener('click',this.proxyClickCanvas);
+    }
 
     this.cm.destroy();
-    document.querySelector('._fd_dev_').remove();
-
-    this.isLoad == false;
+    document.querySelector('#_fd_dev_').remove();
+    document.querySelector('#fddev-chrome-css').remove();
+    this.isLoad = false;
   },
   start(){
     this.init();
     this.bindEvent();
     this.cm = new circleMenus(document.querySelector('.menu-btn'),getMenuConfig(this));
     this.cm.toggleMenu();
-    this.isLoad == true;
+    this.isLoad = true;
   }
 };
 
 if(!chrome.extension){
   devTool.start();
-}
+}else{
+  chrome.extension.onRequest.addListener( function(request, sender, sendResponse) {
+    var data, isActived;
 
-chrome.extension.onRequest.addListener( function(request, sender, sendResponse) {
-  var isActived = false;
-  if (request.command == "toggleOpen"){
-    if(!devTool.isLoad){
-      devTool.start();
-      isActived = true;
-    }else{
-      devTool.destroy();
+    if (request.command == "toggleOpen"){
+      isActived = false;
+      if(!devTool.isLoad){
+        devTool.start();
+        isActived = true;
+      }else{
+        devTool.destroy();
+      }
+      data = { status: isActived};  
+    }else if(request.command == "getStatus"){
+      data = { status: devTool.isLoad}; 
     }
 
-    sendResponse({ status: isActived});
-  }
-});
+    sendResponse(data);
+  });
+}

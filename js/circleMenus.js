@@ -55,7 +55,7 @@ circleMenus.prototype = {
         "class": this.options.svgClz
     });
 
-    this.drawPizzas(Math.min(this.centerPoint.x, this.centerPoint.y)/2,this.options.menuList,{hide:true});
+    this.drawPizzas(Math.min(this.centerPoint.x, this.centerPoint.y)*0.6,this.options.menuList,{hide:true});
     this.drawCircle();
     this.element.appendChild(this.svg);
     this.bindEvent();
@@ -130,12 +130,8 @@ circleMenus.prototype = {
     for(var i=0; i<pizzaCount; i++){
       var item = menuDatas[i],
           childMenus = item.childMenus,
-          childEndAngle,
           textOriginRotate = 0,
           txtCy;
-
-      if(!settings.isChild)
-        menusMap[item.id] = item;
 
       start_angle = i* perPizza;
       startAngleRadian = _.angleToRadian(start_angle);
@@ -168,15 +164,21 @@ circleMenus.prototype = {
         'data-id': item.id
       });
 
-      if(perPizza*i > 90)
+      if(perPizza*i > 90 && perPizza*i < 270)
         textOriginRotate = 180;
 
-      txtCy = cy - r * 0.7;
+      txtCy = cy - r * 0.8;
+
+      if(!settings.isChild){
+        menusMap[item.id] = item;
+        txtCy = cy - r * 0.7;
+      }
+
       text = new SvgElement("text",{
         x: cx,
         y: txtCy,
-        'font-size':'0.8em',
-        'fill': '#c9cabb',
+        'font-size':'0.9em',
+        'fill': '#fff',
         'transform-origin': transformOrigin,
         transform: 'rotate(' + (perPizza*i+perPizza/2) + ', ' + cx +' ' + cy +') rotate(' + (textOriginRotate) +', ' + cx +' ' + txtCy+')'
       });
@@ -185,12 +187,7 @@ circleMenus.prototype = {
       pathLink.appendChild(text);
       pathGroup.appendChild(pathLink);
 
-      // if(pizzaCount - 1 == i)
-      //   childEndAngle = end_angle;
-      // else
-        childEndAngle = end_angle - 5;
       if(childMenus && childMenus.length > 0){
-        // childPathGroup.appendChild(this.getChildMenus(childMenus,start_angle,childEndAngle,r));
         this.addEvent('hover',item.id,(cms,e,menuId)=>{
           if(this.hoverEles === menuId)
             return;
@@ -198,7 +195,7 @@ circleMenus.prototype = {
           this.packUpChildMenus();
 
           this.hoverEles = menuId;
-          this.drawPizzas(r * 2 - 5,cms[0],{cls: 'child-menus'+ menuId,first:true,isChild:true});
+          this.drawPizzas(r / 0.6 - 5,cms[0],{cls: 'child-menus'+ menuId,first:true,isChild:true});
           document.querySelectorAll(`.child-menus${menuId} .menu-item`).forEach((item)=>{
             item.style.transform = 'rotate(0deg)';
           })
@@ -211,67 +208,6 @@ circleMenus.prototype = {
       this.svg.insertBefore(pathGroup,this.svg.firstChild);
     else
       this.svg.appendChild(pathGroup);
-    // this.svg.appendChild(childPathGroup);
-  },
-  getChildMenus: function(childMenus,start_angle,end_angle,r){
-    var cx = this.centerPoint.x,
-        cy = this.centerPoint.y,
-        innerR = r + 10,
-        outerR = innerR + 20,
-        path, d, big=0, text,
-        childMenusLen = childMenus.length;
-
-    var step = (end_angle - start_angle) / childMenusLen;
-    var pathGroup = new SvgElement("g",{
-      "class": "outer-menus-group"
-    });
-
-    for(var i=0; i < childMenusLen; i++){
-      end_angle = start_angle + step;
-
-    var startPoint = this.getCirclePoint(cx,cy,innerR,start_angle),
-        endPoint = this.getCirclePoint(cx,cy,innerR,end_angle),
-        outerStartPoint = this.getCirclePoint(cx,cy,outerR,start_angle),
-        outerEndPoint = this.getCirclePoint(cx,cy,outerR,end_angle);
-
-    if (_.angleToRadian(end_angle - start_angle) > Math.PI) big = 1;
-
-    var d = "M" + outerStartPoint.x + ',' + outerStartPoint.y;
-
-    d += " A" + outerR + "," + outerR + // Draw an arc of radius r
-         " 0 " + big + ' ' + 1 + ' ' +// Arc details...
-         outerEndPoint.x + "," + outerEndPoint.y
-         ;
-
-    // d += "M" + startPoint.x + ',' + startPoint.y + " A" + innerR + "," + innerR +
-    //      " 0 " + big + ' ' + 1 + ' ' +
-    //      endPoint.x + "," + endPoint.y
-
-    // d += 'z';
-
-    start_angle = end_angle;
-
-    path = new SvgElement("path", {
-      fill: 'none',
-      'stroke-width': 21,
-      stroke: '#81c2d6',
-      d: d,
-      id: 'path' + i
-    });
-    text = new SvgElement("text",{
-      x: 0,
-      y: 10
-    });
-    var textPath = new SvgElement("textPath",{
-      'xlink:href': "#path"+i
-    });
-    textPath.textContent = childMenus[i].value;
-
-    pathGroup.appendChild(path);
-    pathGroup.appendChild(text);
-    text.appendChild(textPath);
-  }
-    return pathGroup;
   },
   packUpChildMenus: function(){
     if(!!this.hoverEles){
@@ -360,24 +296,20 @@ circleMenus.prototype = {
     this.svg.removeEventListener('click',this.proxyClickDispatch);
     this.triggleBtn.removeEventListener('mouseenter',this.proxyRemoveChildMenus);
     document.querySelector('.menus-group').removeEventListener('mouseover',this.proxyHoverDispatch);
+    this.events = {};
+    this.hoverEles = '';
+    this.menusMap = {};
   },
   bindEvent: function(){
     this.proxyToggleMenu = this.toggleMenu.bind(this);
     this.proxyClickDispatch = this.dispatchMenu.bind(this,'click');
     this.proxyHoverDispatch = this.dispatchMenu.bind(this,'hover');
-    this.proxyRemoveChildMenus = this.removeChildMenus.bind(this);
+    this.proxyRemoveChildMenus = this.packUpChildMenus.bind(this);
 
     this.triggleBtn.addEventListener('click',this.proxyToggleMenu,false);
     this.svg.addEventListener('click',this.proxyClickDispatch,false);
     this.triggleBtn.addEventListener('mouseenter',this.proxyRemoveChildMenus,false);
     document.querySelector('.menus-group').addEventListener('mouseover',this.proxyHoverDispatch,false);
-  },
-  removeChildMenus: function(){
-    var menus = document.querySelector('.child-menus' + this.hoverEles);
-    if(menus){
-      menus.remove();
-      this.hoverEles = '';
-    }
   },
   addEvent:function(evtName,name,fn){
     var arg = Array.prototype.slice.call(arguments,3);

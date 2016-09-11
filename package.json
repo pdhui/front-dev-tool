@@ -1,22 +1,14 @@
 {
-  "name": "@flyme/modaldialog",
-  "version": "1.4.1",
-  "description": "popup dialog",
+  "name": "front-dev-tool",
+  "version": "0.1.1",
+  "description": "frontEnd develop assist tool",
   "main": "./build/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack",
-    "example": "webpack --config ./webpack.config.test.js",
-    "dev": "node node_modules/webpack-dev-server/bin/webpack-dev-server.js --config webpack.config.js --host=172.17.132.184 --port=8900"
+    "dev": "node node_modules/webpack-dev-server/bin/webpack-dev-server.js --config webpack.config.js --host=127.0.0.1 --port=8900"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/pdhui/modaldialog.git"
-  },
-  "publishConfig": {
-    "registry": "http://172.17.132.227:8888/"
-  },
-  "homepage": "https://github.com/pdhui/modaldialog#readme",
+  "homepage": "https://github.com/pdhui/front-dev-tool",
   "author": "panda.xiong",
   "license": "MIT",
   "devDependencies": {

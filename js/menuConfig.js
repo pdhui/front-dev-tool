@@ -76,6 +76,11 @@ module.exports = function getConfig(context) {
             id: 'toggleLine',
             value: '隐藏/显示参考线',
             click: dispatchEvent
+          },
+          {
+            id: 'toggleLineCoords',
+            value: '隐藏/显示坐标值',
+            click: dispatchEvent
           }
         ]
       }
