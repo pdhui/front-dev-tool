@@ -150,7 +150,8 @@ module.exports = {
     lastPoint = new Point(posX,posY);
     if(this.linePoints.length > 0){
       startPoint = this.linePoints[this.linePoints.length - 1];
-      this.createLineLabel(startPoint,lastPoint);
+      if(this.linePoints.length % 2 != 0)
+        this.createLineLabel(startPoint,lastPoint);
     }
     this.linePoints.push(lastPoint);
 
