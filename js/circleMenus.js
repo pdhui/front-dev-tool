@@ -37,13 +37,15 @@ circleMenus.defaults = {
 circleMenus.prototype = {
   constructor: circleMenus,
   opened: true,
-  menusMap: {},
-  events:{},
+  menusMap: null,
+  events:null,
   init: function(){
     this.size = this.options.size;
     this.width = this.size;
     this.height = this.size;
     this.centerPoint = new Point(this.width / 2,this.height/2);
+    this.events = {};
+    this.menusMap = {};
     this.prepare();
   },
   prepare:function(){
@@ -61,9 +63,7 @@ circleMenus.prototype = {
     this.bindEvent();
   },
   drawCircle: function(){
-    var width = this.width,
-        height = this.height,
-        cx = this.centerPoint.x,
+    var cx = this.centerPoint.x,
         cy = this.centerPoint.y,
         r = Math.min(cx, cy)/5;
 
@@ -119,11 +119,7 @@ circleMenus.prototype = {
       "transform-origin": transformOrigin,
       style:'transform:'+this.menuGroupRotate+ scaleStyle
     }),
-    childPathGroup = new SvgElement("g",{
-      "class": "child-menus-group",
-      "transform-origin": transformOrigin,
-      style:'transform:'+this.menuGroupRotate+ ' scale(0)'
-    }), pathLink, text,textPathTemp;
+    pathLink, text;
 
     if (_.angleToRadian(perPizza) > Math.PI) big = 1;
 
@@ -296,9 +292,9 @@ circleMenus.prototype = {
     this.svg.removeEventListener('click',this.proxyClickDispatch);
     this.triggleBtn.removeEventListener('mouseenter',this.proxyRemoveChildMenus);
     document.querySelector('.menus-group').removeEventListener('mouseover',this.proxyHoverDispatch);
-    this.events = {};
+    this.events = null;
     this.hoverEles = '';
-    this.menusMap = {};
+    this.menusMap = null;
   },
   bindEvent: function(){
     this.proxyToggleMenu = this.toggleMenu.bind(this);

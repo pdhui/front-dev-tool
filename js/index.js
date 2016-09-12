@@ -60,13 +60,13 @@ const devTool = {
         guideLinePlugin.linePoints.pop();
       }
     }else if(menuid == 'deleteAllLine'){
-      var guideLines = document.querySelectorAll('.guide-line');
+      var guideLines = _.toArray(document.querySelectorAll('.guide-line'));
       guideLines.forEach((item)=>{
           item.remove();
       });
       guideLinePlugin.linePoints = [];
     }else if(menuid == 'toggleLine'){
-      var guideLines = document.querySelectorAll('.guide-line');
+      var guideLines = _.toArray(document.querySelectorAll('.guide-line'));
 
       guideLines.forEach((item)=>{
           if(this.isShowGuideLine){
@@ -361,18 +361,25 @@ const devTool = {
     container.removeEventListener('touchend',this);
 
     document.body.removeEventListener('click',this.proxyClickBody);
-    document.querySelector('.imgfile').removeEventListener('change',this.proxyLoadImg);
+
 
     if(this.canvas){
       this.canvas.removeEventListener('mousemove',this.proxyCanvasMove);
       this.canvas.removeEventListener('touchmove',this.proxyCanvasMove);
       this.canvas.removeEventListener('click',this.proxyClickCanvas);
+      this.canvas.remove();
+      this.canvas = null;
     }
 
-    this.cm.destroy();
-    document.querySelector('#_fd_dev_').remove();
-    document.querySelector('#fddev-chrome-css').remove();
+    if(document.querySelector('#_fd_dev_')){
+      this.cm.destroy();
+      document.querySelector('.imgfile').removeEventListener('change',this.proxyLoadImg);
+      document.querySelector('#_fd_dev_').remove();
+      document.querySelector('#fddev-chrome-css').remove();
+    }
+
     this.isLoad = false;
+    localStorage.removeItem('_fd_dev_');
   },
   start(){
     this.init();
@@ -394,14 +401,28 @@ if(!chrome.extension){
       if(!devTool.isLoad){
         devTool.start();
         isActived = true;
+        localStorage.setItem('_fd_dev_',JSON.stringify({stu:isActived}));
       }else{
         devTool.destroy();
       }
-      data = { status: isActived};  
+      data = { status: isActived};
     }else if(request.command == "getStatus"){
-      data = { status: devTool.isLoad}; 
+      data = { status: devTool.isLoad};
     }
 
     sendResponse(data);
   });
+
+  var fdStorage = JSON.parse(localStorage.getItem('_fd_dev_'));
+
+  if(fdStorage && fdStorage.stu != devTool.isLoad){
+    if(devTool.isLoad){
+      devTool.destroy();
+    }else{
+      devTool.start();
+    }
+    chrome.runtime.sendMessage(null,{command:'toggleIcon',data:{status:devTool.isLoad}},function(){
+
+    });
+  }
 }

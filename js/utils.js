@@ -25,5 +25,8 @@ module.exports = {
       div.removeChild(temp);
       return temp;
     }
-  })()
+  })(),
+  toArray: function(likeArrays){
+    return Array.prototype.slice.call(likeArrays,0);
+  }
 };

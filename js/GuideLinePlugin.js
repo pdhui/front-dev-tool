@@ -32,8 +32,7 @@ module.exports = {
     // document.body.style.overflow = 'hidden';
   },
   createZoom(){
-    var canvas = _.createHtmlDom('<canvas class="guide-zoom"></canvas>'),
-        ctx = canvas.getContext("2d");
+    var canvas = _.createHtmlDom('<canvas class="guide-zoom"></canvas>');
 
     canvas.width = 50;
     canvas.height = 50;
@@ -179,7 +178,7 @@ module.exports = {
     ctx.stroke();
   },
   resizeGuideLine(preW, preH){
-    var lines = document.querySelectorAll('.guide-line'),
+    var lines = _.toArray(document.querySelectorAll('.guide-line')),
         cvasW = this.context.canvasWidth,
         cvasH = this.context.canvasHeight,
         prePoint;
@@ -199,7 +198,7 @@ module.exports = {
       });
 
       _.assign(line.querySelector('.hor-guide-line').style,{
-        height: cvasW + 'px',
+        width: cvasW + 'px',
         top: point.y + 'px'
       });
 
@@ -210,15 +209,17 @@ module.exports = {
       guideTxt.textContent = '(' + point.x + ',' + point.y + ')';
 
       if(prePoint){
-        line.querySelector('.line-label').remove();
-        this.createLineLabel(prePoint,point);
+        if(line.querySelector('.line-label')){
+          line.querySelector('.line-label').remove();
+          this.createLineLabel(prePoint,point);
+        }
       }
 
       prePoint = point;
     });
   },
   toggleLineCoords(){
-    document.querySelectorAll('.guide-line .guide-txt').forEach((dom)=>{
+    _.toArray(document.querySelectorAll('.guide-line .guide-txt')).forEach((dom)=>{
       if(this.isShowCoords)
         dom.style.display = 'none';
       else

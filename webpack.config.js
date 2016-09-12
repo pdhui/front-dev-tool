@@ -13,7 +13,7 @@ module.exports = {
         libraryTarget: "umd",
         library: "fdDev",
     },
-    devtool:'sourcemap',
+    // devtool:'sourcemap',
     module: {
         loaders: [
             {
@@ -30,11 +30,10 @@ module.exports = {
         ]
     },
     plugins: [
-        /*new ExtractTextPlugin("css/[name].css"),
         new webpack.optimize.UglifyJsPlugin({
             mangle: {
                 except: ['$', 'exports', 'require']
             }
-        })*/
+        })
     ]
 }
