@@ -78,6 +78,12 @@ const devTool = {
       this.isShowGuideLine = !this.isShowGuideLine;
     }else if(menuid == 'toggleLineCoords'){
       guideLinePlugin.toggleLineCoords();
+    }else if(menuid == 'toggleTop'){
+      if(this.coverImgStyle.zIndex < 9010){
+        this.coverImgStyle.zIndex = 9010;
+      }else{
+        this.coverImgStyle.zIndex = 0;
+      }
     }
     e.stopPropagation();
   },
@@ -100,21 +106,25 @@ const devTool = {
     reader.readAsDataURL(target.files[0]);
   },
   createImgCanvas(img){
-    var canvas = document.createElement('canvas'),
-        ctx = canvas.getContext("2d");
+    var canvas = this.canvas,
+        ctx;
 
-    canvas.id = 'visualImg';
+    if(!canvas){
+      canvas = document.createElement('canvas');
+      canvas.id = 'visualImg';
+      document.body.appendChild(canvas);
+      canvas.addEventListener('click',this.proxyClickCanvas,false);
+      this.canvas = canvas;
+      this.canvasContext = canvas.getContext("2d");
+      this.coverImgStyle = canvas.style;
+    }
+
+    ctx = this.canvasContext;
     canvas.width = img.width;
     canvas.height = img.height;
 
     ctx.drawImage(img,0,0,img.width,img.height);
 
-    canvas.addEventListener('click',this.proxyClickCanvas,false);
-    document.body.appendChild(canvas);
-
-    this.canvas = canvas;
-    this.canvasContext = ctx;
-    this.coverImgStyle = canvas.style;
     this.caculateCanvas();
   },
   caculateCanvas(){
@@ -248,15 +258,21 @@ const devTool = {
   },
   transformContainer(){
     var winW = window.innerWidth,
+        winH = window.innerHeight,
         rect = this.$container.getBoundingClientRect(),
-        diffL = pageXOffset + rect.right - winW,
-        scale = (1 - Math.abs(diffL / rect.width));
+        diffL = rect.right - winW,
+        diffB = rect.bottom - winH,
+        scale = 1;
 
     if(diffL > -15 && diffL < 79){
-      if(scale < 0.4 )
-        scale = 0.4;
-      this.$container.style.transform = 'scale(' + (scale) + ')';
+      scale = (1 - Math.abs(diffL / rect.width));
+    }else if(diffB > -10 && diffB < 79){
+      scale = (1 - Math.abs(diffB / rect.height));
     }
+    if(scale < 0.4 )
+      scale = 0.4;
+
+    this.$container.style.transform = 'scale(' + (scale) + ')';
   },
   _mouseUp(evt){
     this.isDown = false;

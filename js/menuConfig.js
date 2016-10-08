@@ -49,6 +49,11 @@ module.exports = function getConfig(context) {
             id: 'fadein',
             value: '减少透明度',
             click: dispatchEvent
+          },
+          {
+            id: 'toggleTop',
+            value: '置顶/默认',
+            click: dispatchEvent
           }
         ]
       },

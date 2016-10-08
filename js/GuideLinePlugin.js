@@ -26,9 +26,12 @@ module.exports = {
 
     this.isCreatingLine = true;
     this.activedLine = newLine;
-    this.createZoom();
 
-    this.context.canvas.classList.add('front-cav');
+    if(this.context.canvas){
+      this.createZoom();
+      this.context.canvas.classList.add('front-cav');
+    }
+
     // document.body.style.overflow = 'hidden';
   },
   createZoom(){
@@ -233,10 +236,13 @@ module.exports = {
     document.body.removeEventListener('touchmove',this.proxyLineMove);
     document.body.removeEventListener('keydown',this.proxyLineMove);
 
-    this.guideZoomCanvas.remove();
-    this.guideZoomCtx = null;
-    this.guideZoomCanvas = null;
-    this.context.canvas.classList.remove('front-cav');
+    if(this.context.canvas){
+      this.guideZoomCanvas.remove();
+      this.guideZoomCtx = null;
+      this.guideZoomCanvas = null;
+      this.context.canvas.classList.remove('front-cav');
+    }
+
     if(isDel){
       this.activedLine.remove();
       this.activedLine = null;
