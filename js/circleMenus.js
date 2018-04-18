@@ -175,7 +175,7 @@ circleMenus.prototype = {
         y: txtCy,
         'font-size':'0.9em',
         'fill': '#fff',
-        'transform-origin': transformOrigin,
+        // 'transform-origin': transformOrigin,
         transform: 'rotate(' + (perPizza*i+perPizza/2) + ', ' + cx +' ' + cy +') rotate(' + (textOriginRotate) +', ' + cx +' ' + txtCy+')'
       });
       text.innerHTML = item.value;
@@ -185,7 +185,7 @@ circleMenus.prototype = {
 
       if(childMenus && childMenus.length > 0){
         this.addEvent('hover',item.id,(cms,e,menuId)=>{
-          if(this.hoverEles === menuId)
+          if(this.hoverEles === menuId || this.opened)
             return;
 
           this.packUpChildMenus();
