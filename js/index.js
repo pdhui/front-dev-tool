@@ -4,6 +4,7 @@ const Point = require('./Point.js');
 const getMenuConfig = require('./menuConfig.js');
 const circleMenus = require('./circleMenus.js');
 const guideLinePlugin = require('./GuideLinePlugin.js');
+require('./tap.js');
 
 const devTool = {
   isMobile: (function(){
@@ -261,13 +262,10 @@ const devTool = {
         winH = window.innerHeight,
         rect = this.$container.getBoundingClientRect(),
         diffL = rect.right - winW,
-        diffB = rect.bottom - winH,
         scale = 1;
 
     if(diffL > -15 && diffL < 79){
       scale = (1 - Math.abs(diffL / rect.width));
-    }else if(diffB > -10 && diffB < 79){
-      scale = (1 - Math.abs(diffB / rect.height));
     }
     if(scale < 0.4 )
       scale = 0.4;
@@ -400,7 +398,7 @@ const devTool = {
   start(){
     this.init();
     this.bindEvent();
-    this.cm = new circleMenus(document.querySelector('.menu-btn'),getMenuConfig(this));
+    this.cm = new circleMenus(document.querySelector('.menu-btn'),getMenuConfig(this), this);
     this.cm.toggleMenu();
     this.isLoad = true;
   }

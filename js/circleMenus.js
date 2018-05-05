@@ -23,9 +23,10 @@ const Point = function(x,y){
   this.x = x;
   this.y = y;
 }
-const circleMenus = function(element, options){
+const circleMenus = function(element, options, context){
   this.element = element;
   this.options = _.assign({},circleMenus.defaults, options);
+  this.context = context;
   this.init();
 };
 
@@ -185,7 +186,7 @@ circleMenus.prototype = {
 
       if(childMenus && childMenus.length > 0){
         this.addEvent('hover',item.id,(cms,e,menuId)=>{
-          if(this.hoverEles === menuId || this.opened)
+          if(this.hoverEles === menuId || this.opened || this.context.isDown)
             return;
 
           this.packUpChildMenus();
@@ -288,7 +289,7 @@ circleMenus.prototype = {
     }
   },
   destroy:function(){
-    this.triggleBtn.removeEventListener('click',this.proxyToggleMenu);
+    this.triggleBtn.removeTapListener();
     this.svg.removeEventListener('click',this.proxyClickDispatch);
     this.triggleBtn.removeEventListener('mouseenter',this.proxyRemoveChildMenus);
     document.querySelector('.menus-group').removeEventListener('mouseover',this.proxyHoverDispatch);
@@ -302,7 +303,10 @@ circleMenus.prototype = {
     this.proxyHoverDispatch = this.dispatchMenu.bind(this,'hover');
     this.proxyRemoveChildMenus = this.packUpChildMenus.bind(this);
 
-    this.triggleBtn.addEventListener('click',this.proxyToggleMenu,false);
+    // this.triggleBtn.addEventListener('click',this.proxyToggleMenu,false);
+
+    this.triggleBtn.addTapListener(this.proxyToggleMenu);
+
     this.svg.addEventListener('click',this.proxyClickDispatch,false);
     this.triggleBtn.addEventListener('mouseenter',this.proxyRemoveChildMenus,false);
     document.querySelector('.menus-group').addEventListener('mouseover',this.proxyHoverDispatch,false);
